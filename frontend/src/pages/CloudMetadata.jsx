@@ -28,14 +28,14 @@ const CloudMetadata = () => {
           "iam": {
             "info": {
               "InstanceProfileArn": "arn:aws:iam::123456789012:instance-profile/SSRF-Role",
-              "InstanceProfileId": "AIPAXXXXXXXXXXXXXXXXX"
+              "InstanceProfileId": "AIPA_MOCK_PROFILE_ID"
             },
             "security-credentials": {
               "SSRF-Role": {
                 "Code": "Success",
-                "AccessKeyId": "ASIAIOSFODNN7EXAMPLE",
-                "SecretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-                "Token": "IQoJb3JpZ2luX2VjEJv...EXAMPLE",
+                "AccessKeyId": "MOCK_ACCESS_KEY_ID_FOR_DEMO",
+                "SecretAccessKey": "MOCK_SECRET_ACCESS_KEY_FOR_DEMO_PURPOSES_ONLY",
+                "Token": "MOCK_SESSION_TOKEN_FOR_DEMO",
                 "Expiration": "2026-07-15T15:00:00Z"
               }
             }
