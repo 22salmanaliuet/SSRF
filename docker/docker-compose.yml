@@ -1,0 +1,117 @@
+version: "3.9"
+
+# ── SEDF Vulnerable Lab Environment ─────────────────────────────────────────
+#
+# Starts:
+#   - Vulnerable Flask web app (target for SSRF testing)
+#   - Redis (internal service reachable via SSRF)
+#   - Simulated AWS metadata mock server
+#
+# Usage:
+#   docker compose up --build -d
+#   python ssrfcli.py -u "http://localhost:5000/fetch?url=FUZZ" --payloads default
+#   docker compose down
+
+services:
+
+  # ── Primary vulnerable target ──────────────────────────────────────────────
+  vulnerable-app:
+    build:
+      context: ./vulnerable_app
+      dockerfile: Dockerfile
+    container_name: sedf_lab_app
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+    networks:
+      ssrf_lab:
+        ipv4_address: 172.20.0.10
+    restart: unless-stopped
+
+  # ── Internal Redis (reachable from vulnerable-app via gopher://) ───────────
+  redis:
+    image: redis:7-alpine
+    container_name: sedf_lab_redis
+    # Intentionally NOT exposed on host — only reachable inside Docker network
+    networks:
+      ssrf_lab:
+        ipv4_address: 172.20.0.20
+    command: redis-server --save "" --appendonly no
+    restart: unless-stopped
+
+  # ── Simulated AWS metadata mock ───────────────────────────────────────────
+  #    Responds on 169.254.169.254 via a mock server on an internal IP
+  metadata-mock:
+    image: python:3.11-slim
+    container_name: sedf_lab_metadata
+    networks:
+      ssrf_lab:
+        ipv4_address: 172.20.0.30
+    command: >
+      sh -c "pip install flask -q &&
+             python -c \"
+      from flask import Flask, jsonify
+      app = Flask(__name__)
+      
+      @app.route('/latest/meta-data/')
+      def meta_root():
+          return 'ami-id\nhostname\niam/\ninstance-id\npublic-ipv4\n'
+      
+      @app.route('/latest/meta-data/iam/security-credentials/')
+      def iam():
+          return 'LabRole\n'
+      
+      @app.route('/latest/meta-data/iam/security-credentials/LabRole')
+      def creds():
+          return jsonify({
+              'Code': 'Success',
+              'Type': 'AWS-HMAC',
+              'AccessKeyId': 'AKIAIOSFODNN7EXAMPLE',
+              'SecretAccessKey': 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+              'Token': 'AQoXnyc4lcK4w==',
+              'Expiration': '2099-01-01T00:00:00Z'
+          })
+      
+      @app.route('/latest/meta-data/hostname')
+      def hostname():
+          return 'ip-172-20-0-30.us-east-1.compute.internal'
+      
+      app.run(host='0.0.0.0', port=80)
+      \""
+    restart: unless-stopped
+
+  # ── HTTP OOB callback listener (for blind SSRF testing) ───────────────────
+  callback-listener:
+    image: python:3.11-slim
+    container_name: sedf_lab_callback
+    ports:
+      - "8888:8888"
+    command: >
+      python -c "
+      from http.server import BaseHTTPRequestHandler, HTTPServer
+      import datetime
+      
+      class H(BaseHTTPRequestHandler):
+          def do_GET(self):
+              print(f'[OOB CALLBACK] {datetime.datetime.now()} token={self.path} from={self.client_address[0]}', flush=True)
+              self.send_response(200)
+              self.end_headers()
+              self.wfile.write(b'OK')
+          def log_message(self, *a): pass
+      
+      print('[*] OOB Callback listener on 0.0.0.0:8888', flush=True)
+      HTTPServer(('0.0.0.0', 8888), H).serve_forever()
+      "
+    networks:
+      ssrf_lab:
+        ipv4_address: 172.20.0.40
+    restart: unless-stopped
+
+
+networks:
+  ssrf_lab:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
