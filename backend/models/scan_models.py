@@ -19,6 +19,9 @@ class ScanRequest(BaseModel):
     enable_blind_ssrf: bool = False
     enable_port_scan: bool = False
     oob_callback_url: Optional[str] = None
+    method: str = "GET"
+    data: Optional[str] = None
+    headers: Optional[str] = None
 
 class ScanResult(BaseModel):
     scan_id: str

@@ -268,7 +268,13 @@ def webhook():
             headers={"Content-Type": "application/json", "X-DevCorp-Signature": "v1=a8b3c9"},
         )
         with urllib.request.urlopen(req, timeout=5) as resp:
-            return jsonify({"status": "success", "http_code": resp.status, "message": f"Webhook test sent to {endpoint}"})
+            content = resp.read(5000).decode('utf-8', errors='ignore')
+            return jsonify({
+                "status": "success", 
+                "http_code": getattr(resp, 'status', 200), 
+                "message": f"Webhook test sent to {endpoint}",
+                "response_preview": content # App accidentally leaking response!
+            })
     except Exception as exc:
         return jsonify({"status": "failed", "error": str(exc), "endpoint": endpoint}), 500
 

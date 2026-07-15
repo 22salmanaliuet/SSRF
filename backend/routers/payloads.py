@@ -9,7 +9,7 @@ from sedf.payloads.generator import PayloadGenerator
 
 router = APIRouter(prefix="/payloads", tags=["payloads"])
 
-@router.get("/", response_model=Dict[str, List[str]])
+@router.get("/")
 async def get_all_payloads():
     args = argparse.Namespace(payloads="all", payload_file=None)
     gen = PayloadGenerator(args)

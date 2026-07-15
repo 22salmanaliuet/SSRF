@@ -23,10 +23,10 @@ active_scans: Dict[str, dict] = {}
 
 class WebSocketReporter(Reporter):
     """Custom reporter that pushes findings to an asyncio queue for WebSocket streaming."""
-    def __init__(self, args, queue: asyncio.Queue):
+    def __init__(self, args, queue: asyncio.Queue, loop: asyncio.AbstractEventLoop):
         super().__init__(args)
         self.queue = queue
-        self.loop = asyncio.get_event_loop()
+        self.loop = loop
 
     def add_finding(self, finding: Finding):
         super().add_finding(finding)
@@ -70,9 +70,9 @@ def build_args_from_request(req: ScanRequest) -> argparse.Namespace:
         timeout=req.timeout,
         delay=0.0,
         proxy=None,
-        headers=None,
-        method="GET",
-        data=None,
+        headers=req.headers,
+        method=req.method,
+        data=req.data,
         cookies=None,
         output=None,
         format="json",
@@ -85,13 +85,13 @@ def build_args_from_request(req: ScanRequest) -> argparse.Namespace:
         lab=False
     )
 
-def run_scan_sync(scan_id: str, req: ScanRequest, queue: asyncio.Queue):
+def run_scan_sync(scan_id: str, req: ScanRequest, queue: asyncio.Queue, main_loop: asyncio.AbstractEventLoop):
     try:
         args = build_args_from_request(req)
-        reporter = WebSocketReporter(args, queue)
-        scanner = Scanner(args, reporter)
+        reporter = WebSocketReporter(args, queue, main_loop)
         
-        asyncio.run_coroutine_threadsafe(queue.put({"type": "log", "message": f"[*] Starting scan on {req.target_url}..."}), asyncio.get_event_loop())
+        asyncio.run_coroutine_threadsafe(queue.put({"type": "log", "message": f"[*] Starting scan on {req.target_url}..."}), main_loop)
+        scanner = Scanner(args, reporter)
         scanner.run()
         reporter.finalize()
         
@@ -100,7 +100,7 @@ def run_scan_sync(scan_id: str, req: ScanRequest, queue: asyncio.Queue):
         active_scans[scan_id]["completed_at"] = datetime.now()
         active_scans[scan_id]["vulnerabilities"] = reporter.findings
     except Exception as e:
-        asyncio.run_coroutine_threadsafe(queue.put({"type": "error", "message": str(e)}), asyncio.get_event_loop())
+        asyncio.run_coroutine_threadsafe(queue.put({"type": "error", "message": str(e)}), main_loop)
         active_scans[scan_id]["status"] = "error"
 
 @router.post("/", response_model=Dict[str, str])
@@ -117,9 +117,12 @@ async def start_scan(request: ScanRequest, background_tasks: BackgroundTasks):
         "vulnerabilities": []
     }
     
+    # Get the running event loop before creating the thread
+    main_loop = asyncio.get_running_loop()
+    
     # Run scanner in background thread so it doesn't block the event loop
     import threading
-    thread = threading.Thread(target=run_scan_sync, args=(scan_id, request, queue))
+    thread = threading.Thread(target=run_scan_sync, args=(scan_id, request, queue, main_loop))
     thread.start()
     
     return {"scan_id": scan_id}

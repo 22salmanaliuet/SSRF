@@ -26,7 +26,19 @@ async def extract_cloud(req: CloudExtractRequest):
     )
     client = HTTPClient(args)
     extractor = CloudMetaExtractor(args, client, req.target_url)
-    # the existing logic probably prints to terminal
-    # we would need to capture it or just run it
     
-    return {"message": "Cloud extraction simulated. Check terminal logs or run full ssrf module."}
+    # Run the extractor
+    provider = req.provider.lower()
+    findings = []
+    
+    if provider == "all":
+        for p in ["aws", "gcp", "azure"]:
+            findings.extend(extractor.run(p))
+    else:
+        findings = extractor.run(provider)
+        
+    return {
+        "status": "success",
+        "message": f"Extracted {len(findings)} cloud metadata records.",
+        "data": findings
+    }

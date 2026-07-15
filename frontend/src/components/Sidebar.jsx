@@ -6,13 +6,15 @@ import {
   ShieldAlert, 
   Library, 
   FileText, 
-  CloudRain 
+  CloudRain,
+  Target
 } from 'lucide-react';
 
 const Sidebar = () => {
   const navItems = [
     { path: '/', name: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { path: '/scanner', name: 'Scanner', icon: <ScanSearch size={20} /> },
+    { path: '/exploiter', name: 'Active Exploiter', icon: <Target size={20} /> },
     { path: '/defense', name: 'Defense Tester', icon: <ShieldAlert size={20} /> },
     { path: '/payloads', name: 'Payload Library', icon: <Library size={20} /> },
     { path: '/reports', name: 'Reports', icon: <FileText size={20} /> },

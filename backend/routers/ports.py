@@ -29,6 +29,26 @@ async def scan_ports(req: PortScanRequest):
     )
     client = HTTPClient(args)
     scanner = SSRFPortScanner(args, client)
-    # The current scanner prints to terminal, we just simulate running it.
     
-    return {"message": "Port scan simulated. Check terminal logs."}
+    # Run the scanner
+    results = scanner.scan(base_url_template=req.target_url)
+    
+    # Convert results to dictionaries
+    data = [
+        {
+            "port": r.port,
+            "state": r.state,
+            "service": r.service,
+            "evidence": r.evidence,
+            "response_time": r.response_time
+        }
+        for r in results
+    ]
+    
+    open_count = sum(1 for r in results if r.state == "open")
+    
+    return {
+        "status": "success",
+        "message": f"Port scan complete. {open_count}/{len(results)} port(s) open.",
+        "data": data
+    }

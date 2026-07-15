@@ -8,6 +8,8 @@ import PayloadLibrary from './pages/PayloadLibrary';
 import Reports from './pages/Reports';
 import CloudMetadata from './pages/CloudMetadata';
 
+import Exploiter from './pages/Exploiter';
+
 function App() {
   return (
     <BrowserRouter>
@@ -17,6 +19,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/scanner" element={<Scanner />} />
+            <Route path="/exploiter" element={<Exploiter />} />
             <Route path="/defense" element={<DefenseTester />} />
             <Route path="/payloads" element={<PayloadLibrary />} />
             <Route path="/reports" element={<Reports />} />

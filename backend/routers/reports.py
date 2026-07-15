@@ -15,7 +15,25 @@ async def list_reports():
     reports = []
     for file in report_files:
         if file == "juiceshop_report.json" or file.startswith("sedf_report"):
-            reports.append({"id": file, "name": file})
+            try:
+                with open(file, "r") as f:
+                    data = json.load(f)
+                    findings_count = data.get("total_findings", 0)
+                    findings = data.get("findings", [])
+                    severities = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+                    for finding in findings:
+                        sev = finding.get("severity", "LOW").upper()
+                        if sev in severities:
+                            severities[sev] += 1
+            except Exception:
+                findings_count = 0
+                severities = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+            reports.append({
+                "id": file, 
+                "name": file, 
+                "total_findings": findings_count,
+                "severities": severities
+            })
     return reports
 
 @router.get("/{report_id}")
