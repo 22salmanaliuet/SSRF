@@ -18,7 +18,6 @@ const Sidebar = () => {
     { path: '/defense', name: 'Defense Tester', icon: <ShieldAlert size={20} /> },
     { path: '/payloads', name: 'Payload Library', icon: <Library size={20} /> },
     { path: '/reports', name: 'Reports', icon: <FileText size={20} /> },
-    { path: '/cloud', name: 'Cloud Metadata', icon: <CloudRain size={20} /> },
   ];
 
   return (

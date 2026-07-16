@@ -9,6 +9,7 @@ from typing import Dict
 from models.scan_models import ScanRequest, ScanResult, Vulnerability
 import sys
 import os
+import socket
 
 # Add parent dir to path so we can import sedf
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -27,6 +28,10 @@ class WebSocketReporter(Reporter):
         super().__init__(args)
         self.queue = queue
         self.loop = loop
+
+    def log(self, message: str):
+        data = {"type": "log", "message": message}
+        asyncio.run_coroutine_threadsafe(self.queue.put(data), self.loop)
 
     def add_finding(self, finding: Finding):
         super().add_finding(finding)
@@ -51,6 +56,11 @@ class WebSocketReporter(Reporter):
         data = {"type": "done", "message": "Scan completed."}
         asyncio.run_coroutine_threadsafe(self.queue.put(data), self.loop)
 
+def get_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))
+        return s.getsockname()[1]
+
 def build_args_from_request(req: ScanRequest) -> argparse.Namespace:
     return argparse.Namespace(
         url=req.target_url,
@@ -58,7 +68,7 @@ def build_args_from_request(req: ScanRequest) -> argparse.Namespace:
         payload_file=None,
         params=None,
         oob_domain=req.oob_callback_url,
-        callback_port=8888,
+        callback_port=get_free_port(),
         blind=req.enable_blind_ssrf,
         exploit=False,
         module=None,

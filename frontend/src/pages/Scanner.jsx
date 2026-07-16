@@ -68,7 +68,7 @@ const Scanner = () => {
         target_url: targetUrl,
         scan_mode: scanMode,
         timeout: 10,
-        enable_blind_ssrf: false,
+        enable_blind_ssrf: scanMode === 'full',
         enable_port_scan: false,
         method: method,
         data: method === 'POST' ? postData : null,

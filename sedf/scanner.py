@@ -266,11 +266,19 @@ class Scanner:
         oob_token = None
         if self.blind_detector:
             oob_token = str(uuid.uuid4())
+            callback_url = self.blind_detector.callback_url_for_token(oob_token)
+            
             if injected_body:
-                # Inject OOB token into body as well
-                injected_body = injected_body + f"&oob_token={oob_token}"
+                if payload == "http://OOB_CALLBACK_MARKER":
+                    injected_body = injected_body.replace("http://OOB_CALLBACK_MARKER", callback_url)
+                else:
+                    injected_body = injected_body + f"&oob_token={callback_url}"
             else:
-                test_url = self.blind_detector.inject_token(test_url, oob_token)
+                if payload == "http://OOB_CALLBACK_MARKER":
+                    test_url = test_url.replace("http://OOB_CALLBACK_MARKER", callback_url)
+                else:
+                    # Append it as an extra query param to catch generic OOB leaks
+                    test_url = test_url + ("&" if "?" in test_url else "?") + f"oob_callback={callback_url}"
 
         try:
             resp = self.client.get(test_url, override_body=injected_body)
@@ -373,6 +381,7 @@ class Scanner:
         # 2. Internal file content indicators
         file_indicators = [
             "root:x:", "[mysql]", "/bin/bash", "daemon:x:", "sys:x:",
+            "$6$", "$5$", "$1$"
         ]
         for indicator in file_indicators:
             if indicator in body:
@@ -481,11 +490,13 @@ class Scanner:
                     print(f"  {cyan}  ╚══════════════════════════════════════════════════════════{reset}\n")
 
             else:
-                if self.args.verbose:
-                    print(
-                        f"  [-] {result.param}={result.payload[:50]!r} "
-                        f"=> {result.response_code} ({result.response_time:.2f}s)"
-                    )
+                msg = (
+                    f"  [-] {result.param}='{result.payload}' "
+                    f"=> {result.response_code} ({result.response_time:.2f}s)"
+                )
+                logger.info(msg)
+                if hasattr(self.reporter, 'log'):
+                    self.reporter.log(msg)
 
     def _determine_severity(self, payload: str, evidence: str) -> Severity:
         """Map payload type and evidence to a severity rating."""

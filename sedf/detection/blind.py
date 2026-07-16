@@ -71,7 +71,11 @@ class BlindSSRFDetector:
     def start(self):
         """Start the local HTTP callback server."""
         try:
-            self._server = HTTPServer(("0.0.0.0", self.port), _CallbackHandler)
+            class ReusableTCPServer(HTTPServer):
+                allow_reuse_address = True
+
+            self._server = ReusableTCPServer(("0.0.0.0", self.port), _CallbackHandler)
+            self._server.blind_detector = self
             self._server_thread = threading.Thread(
                 target=self._server.serve_forever, daemon=True
             )
@@ -136,7 +140,23 @@ class BlindSSRFDetector:
 
     @staticmethod
     def _get_local_ip() -> str:
-        """Determine the machine's outbound IP address."""
+        """Determine the machine's outbound IP address.
+        Since we are testing against a Docker container, we need to provide an IP
+        that the container can route back to the host.
+        """
+        # First try common docker host IPs
+        for ip in ["172.17.0.1", "172.18.0.1"]:
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.settimeout(0.5)
+                # Check if this interface exists locally
+                s.bind((ip, 0))
+                s.close()
+                return ip
+            except Exception:
+                pass
+                
+        # Fallback to external IP
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))

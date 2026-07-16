@@ -181,6 +181,8 @@ class PayloadGenerator:
         """Return the configured payload list, loading it on first call."""
         if not self._payloads:
             self._payloads = self._load()
+            if getattr(self.args, "blind", False):
+                self._payloads.append("http://OOB_CALLBACK_MARKER")
         return self._payloads
 
     def _load(self) -> List[str]:

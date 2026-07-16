@@ -6,7 +6,6 @@ import Scanner from './pages/Scanner';
 import DefenseTester from './pages/DefenseTester';
 import PayloadLibrary from './pages/PayloadLibrary';
 import Reports from './pages/Reports';
-import CloudMetadata from './pages/CloudMetadata';
 
 import Exploiter from './pages/Exploiter';
 
@@ -23,7 +22,6 @@ function App() {
             <Route path="/defense" element={<DefenseTester />} />
             <Route path="/payloads" element={<PayloadLibrary />} />
             <Route path="/reports" element={<Reports />} />
-            <Route path="/cloud" element={<CloudMetadata />} />
           </Routes>
         </div>
       </div>

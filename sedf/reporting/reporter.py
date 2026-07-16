@@ -97,6 +97,10 @@ class Reporter:
         self._output_file = getattr(args, "output", None)
         self._fmt = getattr(args, "format", "terminal")
 
+    def log(self, message: str):
+        """Allow custom reporters to intercept regular logs."""
+        pass
+
     def add_finding(self, finding: Finding):
         """Add a remediation hint and store the finding."""
         finding.remediation = REMEDIATIONS.get(finding.severity, "")
